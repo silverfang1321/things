@@ -1,228 +1,133 @@
 // ==UserScript==
 // @name         Brazen UI Generator
 // @namespace    brazenvoid
-// @version      2.0.17 // Incrementing version for changes
+// @version      2.0.16
 // @author       brazenvoid
 // @license      GPL-3.0-only
 // @description  Helper methods to generate a control panel UI for scripts
 // @grant        GM_addStyle
-// @match        https://hitomi.la/* // Adding match patterns for hitomi.la
 // ==/UserScript==
 
 /**
  * @function GM_addStyle
  * @param {string} style
  */
-GM_addStyle(`
-@keyframes brazen-fade {
-    from { opacity: 0; }
-    to { opacity: 1; }
+GM_addStyle(`@keyframes brazen-fade{from{opacity:0}to{opacity:1}}#restore-settings.bv-input{margin-bottom:1rem}#settings-wrapper{bottom:5vh;overflow:auto;resize:horizontal;top:5vh;z-index:1001}.show-settings.bv-section{top:5vh;box-shadow:0 0 20px white;padding:8px;border-radius:5px;border:2px solid white}.bv-actions{display:inline-flex;justify-content:center;padding:0 0.25rem;text-align:center}.bv-actions .bv-button{width:auto}.bv-bg-colour{background-color:#4f535b}.bv-border-primary{border:1px solid black}.bv-break{margin:0.5rem 0}.bv-button{background-color:revert;padding:0.5rem 1rem;width:100%}.bv-flex-column{flex-direction:column}.bv-font-primary{color:white}.bv-font-secondary{color:black}.bv-group{align-items:center;display:flex;min-height:20px}.bv-group + .bv-group{margin-top:1rem}.bv-group.bv-range-group,.bv-group.bv-text-group{align-items:center}.bv-group.bv-range-group > input{width:75px}.bv-group.bv-range-group > input + input{margin-left:5px}.bv-group.bv-textarea-group{align-items:start;flex-direction:column;overflow:hidden}.bv-group.bv-textarea-group > textarea.bv-input{margin-top:0.5rem;resize:vertical;width:100%}input.bv-input,select.bv-input,textarea.bv-input{box-sizing:border-box;margin:0;padding:0.5rem}.bv-input.bv-checkbox-radio{margin-right:5px;scale:2}.bv-input.bv-text{width:100%}.bv-label{flex-grow:1;text-align:start}.bv-label.bv-text + .bv-input.bv-text{width:40%}.bv-section{display:flex;flex-direction:column;font-family:"roboto";font-size:1rem;font-weight:normal;left:0;padding:1rem;position:fixed;z-index:1000}.bv-section > div + div{margin-top:1rem}.bv-section hr{border:1px solid white;margin:1rem 0}.bv-section button + button{margin-left:0.25rem}.bv-section .bv-title{display:block;height:20px;margin-bottom:1rem;text-align:center;width:100%}.bv-show-settings{border:0;font-size:0.7rem;height:90vh;left:0;margin:0;padding:0;position:fixed;top:5vh;width:0.2vw;writing-mode:sideways-lr;z-index:999}.bv-show-settings .bv-title{display:block;height:20px;width:100%}.bv-tab-button{background-color:inherit;border-bottom:0;border-top-left-radius:3px;border-top-right-radius:3px;cursor:pointer;outline:none;padding:0.5rem 0.75rem;transition:0.3s}.bv-tab-button.bv-active,.bv-tab-button:hover{color:black;background-color:white}.bv-tab-panel{animation:brazen-fade 1s;display:none;flex-direction:column;padding:1rem}.bv-tab-panel.bv-active{display:flex}.bv-tabs-nav{display:flex;flex-wrap:wrap;overflow:hidden}
+.bv-ui-fixed {
+  position: fixed;
+  top: 90px;
+  right: 32px;
+  min-width: 320px;
+  max-width: 400px;
+  background: #fff;
+  color: #222;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(33,150,243,0.15), 0 1.5px 6px rgba(0,0,0,0.08);
+  font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+  z-index: 10010;
+  padding: 1.5rem 1.25rem 1.25rem 1.25rem;
+  border: 1.5px solid #2196F3;
+  transition: box-shadow 0.2s, transform 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
-
-/* Base styles for the UI container */
-.brazen-ui-container {
-    position: absolute; /* Will be overridden by specific page rules */
-    background-color: #333; /* Darker background for "downloader script" feel */
-    border: 1px solid #555; /* Subtle border */
-    border-radius: 6px;
-    padding: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    z-index: 9999; /* Ensure it's on top */
-    color: #eee; /* Light text color */
-    font-family: 'Segoe UI', Arial, sans-serif; /* Modern, readable font */
-    font-size: 14px;
-    width: 280px; /* Fixed width for consistency */
-    box-sizing: border-box; /* Include padding/border in width */
-    max-height: 90vh; /* Prevent overflow on smaller screens */
-    overflow-y: auto; /* Scroll if content is too long */
-    display: flex;
-    flex-direction: column;
+.bv-ui-fixed .bv-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #2196F3;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(33,150,243,0.12);
+  transition: background 0.2s;
 }
-
-/* Specific positioning for hitomi.la tag pages */
-body.hitomi-tag-page .brazen-ui-container {
-    position: fixed; /* Fixed position for scrolling */
-    top: 10px;
-    right: 10px;
+.bv-ui-fixed .bv-close-btn:hover {
+  background: #1976D2;
 }
-
-/* Specific positioning for hitomi.la post pages */
-body.hitomi-post-page .brazen-ui-container {
-    position: absolute; /* Relative to its parent, then moved with flex/grid */
-    margin-top: 10px; /* Space from the related galleries title */
-    align-self: flex-start; /* Align to the start in a flex container */
+.bv-ui-fixed .bv-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #1976D2;
+  margin-bottom: 0.5rem;
+  text-align: left;
 }
-
-
-#restore-settings.bv-input{margin-bottom:1rem}
-#settings-wrapper{
-    /* These styles are mostly overridden by .brazen-ui-container */
-    bottom:5vh;
-    overflow:auto;
-    resize:horizontal;
-    top:5vh;
-    z-index:1001;
-    min-width: 250px; /* Ensure a minimum width for readability */
+.bv-ui-fixed .bv-section {
+  background: none;
+  box-shadow: none;
+  border: none;
+  padding: 0;
+  position: static;
+  color: #222;
 }
-.show-settings.bv-section{
-    top:5vh;
-    box-shadow:0 0 10px rgba(0,0,0,0.5); /* Softer shadow */
-    padding:6px 10px; /* Adjusted padding */
-    border-radius:4px;
-    border:1px solid #666; /* Subtler border */
-    background-color: #555; /* Consistent dark background */
-    color: #eee; /* Light text color */
-    font-size: 0.85rem; /* Slightly smaller font */
-    left: 0; /* Keep it on the left */
-    width: auto; /* Let content dictate width */
-    writing-mode: unset; /* Revert writing mode for horizontal text */
-    height: auto; /* Auto height */
-    text-align: center; /* Center the text */
+.bv-ui-fixed .bv-button {
+  background: #2196F3;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1.2rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 4px rgba(33,150,243,0.10);
 }
-.bv-actions{
-    display:flex; /* Changed to flex for better button alignment */
-    justify-content: space-around; /* Distribute space evenly */
-    padding:0.25rem 0; /* Adjusted padding */
-    gap: 8px; /* Space between buttons */
+.bv-ui-fixed .bv-button:hover {
+  background: #1976D2;
 }
-.bv-actions .bv-button{
-    flex-grow: 1; /* Allow buttons to grow and fill space */
-    width: auto; /* Override fixed width */
-    background-color: #007bff; /* Primary action color */
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.1s ease;
+.bv-ui-fixed .bv-group {
+  margin-bottom: 0.75rem;
 }
-.bv-actions .bv-button:hover{
-    background-color: #0056b3;
-    transform: translateY(-1px);
+.bv-ui-fixed .bv-input {
+  border-radius: 4px;
+  border: 1px solid #bbb;
+  padding: 0.4rem 0.7rem;
+  font-size: 1rem;
+  margin-top: 0.2rem;
+  margin-bottom: 0.2rem;
+  background: #f7faff;
+  color: #222;
+  box-sizing: border-box;
 }
-.bv-actions .bv-button:active{
-    transform: translateY(0);
+.bv-ui-fixed .bv-label {
+  color: #1976D2;
+  font-weight: 500;
+  margin-bottom: 0.2rem;
 }
-
-.bv-bg-colour{background-color:transparent;} /* Remove explicit background as container has it */
-.bv-border-primary{border:1px solid #666;} /* Consistent border color */
-.bv-break{margin:0.5rem 0; border-top: 1px dashed #666;} /* Dashed separator */
-.bv-button{
-    background-color: #5cb85c; /* Default button color */
-    color: white;
-    padding:0.5rem 1rem;
-    width:100%;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 0.2s ease;
+.bv-ui-fixed .bv-break {
+  margin: 0.7rem 0;
 }
-.bv-button:hover{
-    background-color: #4cae4c;
+.bv-ui-fixed .bv-tabs-nav {
+  background: #e3f2fd;
+  border-radius: 6px 6px 0 0;
+  padding: 0.3rem 0.5rem;
+  margin-bottom: 0.5rem;
 }
-
-.bv-flex-column{flex-direction:column}
-.bv-font-primary{color:#eee} /* Light primary font color */
-.bv-font-secondary{color:#ccc} /* Slightly darker secondary font color */
-
-.bv-group{align-items:center;display:flex;min-height:20px; margin-bottom: 8px;} /* Add bottom margin for spacing */
-.bv-group + .bv-group{margin-top:0.5rem} /* Reduced margin between groups */
-.bv-group.bv-range-group,.bv-group.bv-text-group{align-items:center}
-.bv-group.bv-range-group > input{width:75px}
-.bv-group.bv-range-group > input + input{margin-left:5px}
-.bv-group.bv-textarea-group{align-items:start;flex-direction:column;overflow:hidden}
-.bv-group.bv-textarea-group > textarea.bv-input{margin-top:0.5rem;resize:vertical;width:100%; min-height: 60px;} /* Min height for text areas */
-input.bv-input,select.bv-input,textarea.bv-input{
-    box-sizing:border-box;
-    margin:0;
-    padding:0.4rem 0.6rem; /* Slightly reduced padding */
-    border: 1px solid #666;
-    background-color: #444; /* Darker input background */
-    color: #eee; /* Light text in inputs */
-    border-radius: 3px;
+.bv-ui-fixed .bv-tab-button {
+  background: none;
+  color: #1976D2;
+  border: none;
+  border-radius: 4px 4px 0 0;
+  font-weight: 500;
+  padding: 0.4rem 1rem;
+  margin-right: 0.2rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
 }
-input.bv-input:focus, select.bv-input:focus, textarea.bv-input:focus {
-    outline: none;
-    border-color: #007bff; /* Highlight on focus */
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+.bv-ui-fixed .bv-tab-button.bv-active, .bv-ui-fixed .bv-tab-button:hover {
+  background: #2196F3;
+  color: #fff;
 }
-.bv-input.bv-checkbox-radio{margin-right:5px;scale:1.2;} /* Slightly smaller scale for checkboxes/radios */
-.bv-input.bv-text{width:100%}
-.bv-label{flex-grow:1;text-align:start; padding-right: 10px; /* Space between label and input */}
-.bv-label.bv-text + .bv-input.bv-text{width:40%}
-.bv-section{
-    display:flex;
-    flex-direction:column;
-    font-family:"Segoe UI", Arial, sans-serif; /* Consistent font */
-    font-size:1rem;
-    font-weight:normal;
-    /* Position properties handled by .brazen-ui-container */
-    padding:0; /* Remove section padding, container handles it */
-    z-index:1000;
-}
-.bv-section > div + div{margin-top:1rem}
-.bv-section hr{border:1px solid #666;margin:1rem 0} /* Consistent separator style */
-.bv-section button + button{margin-left:0.25rem}
-.bv-section .bv-title{
-    display:block;
-    height:auto; /* Auto height for title */
-    margin-bottom:0.75rem; /* Reduced margin */
-    text-align:center;
-    width:100%;
-    font-size: 1.1em;
-    font-weight: bold;
-    color: #007bff; /* Highlight title */
-    border-bottom: 1px solid #444; /* Separator under title */
-    padding-bottom: 5px;
-}
-.bv-show-settings{
-    border:0;
-    font-size:0.7rem;
-    height:90vh;
-    left:0;
-    margin:0;
-    padding:0;
-    position:fixed;
-    top:5vh;
-    width:0.2vw;
-    writing-mode:sideways-lr;
-    z-index:999
-}
-.bv-show-settings .bv-title{display:block;height:20px;width:100%}
-.bv-tab-button{
-    background-color:#555; /* Darker tab button */
-    border-bottom:0;
-    border-top-left-radius:3px;
-    border-top-right-radius:3px;
-    cursor:pointer;
-    outline:none;
-    padding:0.5rem 0.75rem;
-    transition:0.3s;
-    color: #eee;
-    border: 1px solid #666; /* Consistent border */
-    border-bottom: none; /* No bottom border for tabs */
-}
-.bv-tab-button.bv-active,.bv-tab-button:hover{
-    color:#fff; /* White text on active/hover */
-    background-color:#007bff; /* Blue active/hover background */
-    border-color: #007bff;
-}
-.bv-tab-panel{
-    animation:brazen-fade 0.5s ease-in-out; /* Faster, smoother fade */
-    display:none;
-    flex-direction:column;
-    padding:1rem;
-    background-color: #444; /* Darker panel background */
-    border-radius: 0 0 6px 6px; /* Rounded bottom corners */
-    border-top: none; /* No top border */
-    margin-top: -1px; /* Overlap with tab nav border */
-}
-.bv-tab-panel.bv-active{display:flex}
-.bv-tabs-nav{
-    display:flex;
-    flex-wrap:wrap;
-    overflow:hidden;
-    margin-bottom: 0; /* No margin below nav */
+.bv-ui-fixed .bv-tab-panel {
+  background: #f7faff;
+  border-radius: 0 0 6px 6px;
+  padding: 1rem 0.5rem;
+  margin-bottom: 0.5rem;
 }
 `)
 
@@ -233,32 +138,7 @@ class BrazenUIGenerator
      */
     static appendToBody(nodes)
     {
-        // Add a class to the body to help with CSS targeting based on page type
-        if (window.location.href.includes('hitomi.la/tag/')) {
-            $('body').addClass('hitomi-tag-page');
-        } else if (window.location.href.includes('hitomi.la/doujinshi/') ||
-                   window.location.href.includes('hitomi.la/manga/') ||
-                   window.location.href.includes('hitomi.la/cg/') ||
-                   window.location.href.includes('hitomi.la/gamecg/') ||
-                   window.location.href.includes('hitomi.la/imageset/')) {
-            $('body').addClass('hitomi-post-page');
-        }
-
-        // Delay appending to ensure the target element exists for post pages
-        if ($('body').hasClass('hitomi-post-page')) {
-            const targetSelector = '.list-title:has(h3:contains("Related Galleries"))';
-            const appendInterval = setInterval(() => {
-                const targetElement = $(targetSelector);
-                if (targetElement.length) {
-                    clearInterval(appendInterval);
-                    // Append the nodes after the target element
-                    targetElement.after(nodes);
-                }
-            }, 100); // Check every 100ms
-        } else {
-            // For tag pages or other pages, append to body as before (but using the new container class)
-            $('body').append(nodes);
-        }
+        $('body').append(nodes)
     }
 
     /**
@@ -317,7 +197,7 @@ class BrazenUIGenerator
      */
     createBreakSeparator()
     {
-        return $('<hr class="bv-break"/>') // Changed to <hr> for better semantic and styling control
+        return $('<br class="bv-break"/>')
     }
 
     /**
@@ -325,9 +205,8 @@ class BrazenUIGenerator
      */
     createContainer()
     {
-        // Renamed and restyled for the new fixed position approach
-        this._section = $('<div class="brazen-ui-container">'); // Changed to div
-        return this._section;
+        this._section = $('<section class="bv-section bv-font-primary">')
+        return this._section
     }
 
     /**
@@ -549,10 +428,10 @@ class BrazenUIGenerator
      */
     createSettingsSection()
     {
-        // Now using the new base container class
         return this.createContainer()
             .attr('id', 'settings-wrapper')
-            .hide(); // Keep it hidden by default
+            .addClass('bv-bg-colour bv-border-primary')
+            .hide()
     }
 
     /**
@@ -563,8 +442,7 @@ class BrazenUIGenerator
      */
     createSettingsShowButton(caption, settingsSection)
     {
-        // Adjust show button class and appearance
-        return $('<button class="bv-show-settings bv-button">') // Use bv-button for consistent styling
+        return $('<button class="show-settings bv-section bv-bg-colour">')
             .text(caption)
             .on('click', () => settingsSection.slideDown(300))
     }
@@ -617,20 +495,19 @@ class BrazenUIGenerator
                 let tabSection = button.parents('.bv-tabs-section:first')
 
                 tabSection.find('.bv-tab-button')
-                    .removeClass('bv-active') // Removed bv-font-secondary/primary classes from here, handled by general rules
-                    .css('background-color', '#555') // Reset background for inactive tabs
-                    .css('color', '#eee'); // Reset text color for inactive tabs
+                    .removeClass('bv-active bv-font-secondary')
+                    .addClass('bv-font-primary')
 
                 tabSection.find('.bv-tab-panel').removeClass('bv-active')
 
-                button.addClass('bv-active')
-                    .css('background-color', '#007bff') // Active tab background
-                    .css('color', '#fff'); // Active tab text color
+                button.removeClass('bv-font-primary').addClass('bv-active bv-font-secondary')
 
                 $('#' + Utilities.toKebabCase(button.text())).addClass('bv-active')
             })
-            // Removed mouseenter/mouseleave from JS, handled by CSS :hover
-        return isFirst ? tabButton.addClass('bv-active').css('background-color', '#007bff').css('color', '#fff') : tabButton.css('background-color', '#555').css('color', '#eee');
+            .on('mouseenter', (event) => $(event.currentTarget).addClass('bv-font-secondary'))
+            .on('mouseleave', (event) => $(event.currentTarget).removeClass('bv-font-secondary'))
+
+        return isFirst ? tabButton.addClass('bv-active bv-font-secondary') : tabButton.addClass('bv-font-primary')
     }
 
     /**
@@ -688,23 +565,50 @@ class BrazenUIGenerator
     }
 }
 
-// Ensure SelectorGenerator and Utilities are defined or included elsewhere in your script.
-// Assuming they are defined like this:
+// Add a function to anchor the UI in the correct spot
+function anchorBrazenUI(uiRoot) {
+  // Remove any previous fixed UI
+  document.querySelectorAll('.bv-ui-fixed').forEach(e => e.remove());
 
-class SelectorGenerator {
-    constructor(prefix) {
-        this.prefix = prefix;
+  // Tag/artist page: .list-title (with #artistname or .header-sort-select)
+  const listTitle = document.querySelector('.list-title');
+  // Gallery/post page: .list-title h3:contains('Related Galleries')
+  let relatedGalleries = null;
+  document.querySelectorAll('.list-title h3').forEach(h3 => {
+    if (h3.textContent.trim().toLowerCase() === 'related galleries') {
+      relatedGalleries = h3.parentElement;
     }
-    getSelector(id) {
-        return `${this.prefix}-${id}`;
-    }
-    getStatLabelSelector(type) {
-        return `${this.prefix}-stat-${type}`;
-    }
+  });
+
+  // Clone and style the UI root
+  uiRoot.classList.add('bv-ui-fixed');
+  uiRoot.style.display = 'flex';
+
+  // Add close button
+  if (!uiRoot.querySelector('.bv-close-btn')) {
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'bv-close-btn';
+    closeBtn.innerHTML = '&times;';
+    closeBtn.title = 'Close';
+    closeBtn.onclick = () => uiRoot.style.display = 'none';
+    uiRoot.appendChild(closeBtn);
+  }
+
+  // Insert in the right place
+  if (relatedGalleries) {
+    // On gallery/post page
+    relatedGalleries.parentNode.insertBefore(uiRoot, relatedGalleries.nextSibling);
+  } else if (listTitle) {
+    // On tag/artist page
+    listTitle.parentNode.insertBefore(uiRoot, listTitle.nextSibling);
+  } else {
+    // Fallback: fixed to top right
+    document.body.appendChild(uiRoot);
+    uiRoot.style.top = '90px';
+    uiRoot.style.right = '32px';
+    uiRoot.style.position = 'fixed';
+  }
 }
 
-class Utilities {
-    static toKebabCase(text) {
-        return text.toLowerCase().replace(/\s/g, '-');
-    }
-}
+// Export/attach the anchor function for use after UI creation
+window.anchorBrazenUI = anchorBrazenUI;
