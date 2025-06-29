@@ -8,89 +8,439 @@
 // @grant        GM_addStyle
 // ==/UserScript==
 
-GM_addStyle(`
-@keyframes bv-fade-in { from { opacity: 0 } to { opacity:1 } }
-.bv-panel {
-  position: fixed;
-  top: 60px; right: 40px;
-  width: 320px;
-  background: #2b2b2b;
-  color: #eee;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-  padding: 16px;
-  display: none;
-  animation: bv-fade-in .3s ease-out;
-  z-index: 10000;
-}
-.bv-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-.bv-header h2 {
-  margin: 0;
-  font-size: 1.2rem;
-}
-.bv-close {
-  background: transparent;
-  border: none;
-  color: #eee;
-  font-size: 1.2rem;
-  cursor: pointer;
-}
-.bv-content {
-  max-height: 60vh;
-  overflow-y: auto;
-}
-.bv-group {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 12px;
-}
-.bv-group label {
-  font-size: .9rem;
-  margin-bottom: 4px;
-}
-.bv-group input,
-.bv-group select,
-.bv-group textarea {
-  padding: 6px 8px;
-  border-radius: 4px;
-  border: 1px solid #555;
-  background: #3a3a3a;
-  color: #eee;
-}
-.bv-group textarea {
-  resize: vertical;
-}
-.bv-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-.bv-button {
-  padding: 6px 12px;
-  background: #4a90e2;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.bv-inject-btn {
-  margin-left: 0.5rem;
-  padding: 4px 8px;
-  font-size: .85rem;
-}
-`);
+class BrazenUIGenerator
+{
+    /**
+     * @param {JQuery} nodes
+     */
+    static appendToBody(nodes)
+    {
+        $('body').append(nodes)
+    }
 
-class BrazenUIGenerator {
-  constructor(title = 'Settings') {
-    this._panel = this._buildPanel(title);
-    $('body').append(this._panel);
-    this._content = this._panel.find('.bv-content');
-  }
+    /**
+     * @param {string} selectorPrefix
+     */
+    constructor(selectorPrefix)
+    {
+        /**
+         * @type {JQuery}
+         * @private
+         */
+        this._section = null
+
+        /**
+         * @type {SelectorGenerator}
+         * @private
+         */
+        this._selectorGenerator = new SelectorGenerator(selectorPrefix)
+
+        /**
+         * @type {string}
+         * @private
+         */
+        this._selectorPrefix = selectorPrefix
+
+        /**
+         * @type {JQuery}
+         * @private
+         */
+        this._statusLine = null
+
+        /**
+         * @type {string}
+         * @private
+         */
+        this._statusText = ''
+    }
+
+    /**
+     * @param {JQuery} node
+     * @param {string} text
+     * @return {JQuery}
+     * @private
+     */
+    _addHelpTextOnHover(node, text)
+    {
+        if (text !== '') {
+            node.on('mouseover', () => this.updateStatus(text, true))
+            node.on('mouseout', () => this.resetStatus())
+        }
+        return node
+    }
+
+    /**
+     * @return {JQuery}
+     */
+    createBreakSeparator()
+    {
+        return $('<br class="bv-break"/>')
+    }
+
+    /**
+     * @return {JQuery}
+     */
+    createContainer()
+    {
+        this._section = $('<section class="bv-section bv-font-primary">')
+        return this._section
+    }
+
+    /**
+     * @param {JQuery|JQuery[]} children
+     * @param {string} wrapperClasses
+     * @return {JQuery}
+     */
+    createFormActions(children, wrapperClasses = '')
+    {
+        return $('<div class="bv-actions"/>').addClass(wrapperClasses).append(children)
+    }
+
+    /**
+     * @param {string} caption
+     * @param {JQuery.EventHandler} onClick
+     * @param {string} hoverHelp
+     * @return {JQuery}
+     */
+    createFormButton(caption, hoverHelp, onClick)
+    {
+        let button = $('<button class="bv-button">').text(caption).on('click', onClick)
+        return this._addHelpTextOnHover(button, hoverHelp)
+    }
+
+    createFormCheckBoxesGroupSection(label, keyValuePairs, hoverHelp)
+    {
+        let section = this.createFormSection(label).addClass('bv-checkboxes-group')
+        for (const element of keyValuePairs) {
+            section.append(
+                this.createFormGroup().append([
+                    this.createFormGroupLabel(element[0], 'checkbox'),
+                    this.createFormGroupInput('checkbox').attr('data-value', element[1]),
+                ]),
+            )
+        }
+        return this._addHelpTextOnHover(section, hoverHelp)
+    }
+
+    /**
+     * @return {JQuery}
+     */
+    createFormGroup()
+    {
+        return $('<div class="bv-group"/>')
+    }
+
+    /**
+     * @param {string} id
+     * @param {Array} keyValuePairs
+     *
+     * @return {JQuery}
+     */
+    createFormGroupDropdown(id, keyValuePairs)
+    {
+        let dropdown = $('<select>').attr('id', id).addClass('bv-input')
+
+        for (let i = 0; i < keyValuePairs.length; i++) {
+            dropdown.append($('<option>').attr('value', keyValuePairs[i][0]).text(keyValuePairs[i][1]).prop('selected', (i === 0)))
+        }
+        return dropdown
+    }
+
+    /**
+     * @param {string} type
+     *
+     * @return {JQuery}
+     */
+    createFormGroupInput(type)
+    {
+        let input = $('<input class="bv-input">').attr('type', type)
+        switch (type) {
+            case 'number':
+            case 'text':
+                input.addClass('bv-text')
+                break
+
+            case 'radio':
+            case 'checkbox':
+                input.addClass('bv-checkbox-radio')
+                break
+        }
+        return input
+    }
+
+    /**
+     * @param {string} label
+     * @param {string} inputType
+     * @return {JQuery}
+     */
+    createFormGroupLabel(label, inputType = '')
+    {
+        let labelFormGroup = $('<label class="bv-label">').text(label)
+        if (inputType !== '') {
+            switch (inputType) {
+                case 'number':
+                case 'text':
+                    labelFormGroup.addClass('bv-text')
+                    labelFormGroup.text(labelFormGroup.text() + ': ')
+                    break
+                case 'radio':
+                case 'checkbox':
+                    labelFormGroup.addClass('bv-checkbox-radio')
+                    break
+            }
+        }
+        return labelFormGroup
+    }
+
+    /**
+     * @param {string} statisticType
+     * @return {JQuery}
+     */
+    createFormGroupStatLabel(statisticType)
+    {
+        return $('<label class="bv-stat-label">').attr('id', this._selectorGenerator.getStatLabelSelector(statisticType)).text('0')
+    }
+
+    /**
+     * @param {string} label
+     * @param {string} inputType
+     * @param {string} hoverHelp
+     * @return {JQuery}
+     */
+    createFormInputGroup(label, inputType, hoverHelp = '')
+    {
+        return this._addHelpTextOnHover(
+            this.createFormGroup().append([
+                this.createFormGroupLabel(label, inputType),
+                this.createFormGroupInput(inputType),
+            ]),
+            hoverHelp,
+        )
+    }
+
+    createFormRadiosGroupSection(label, keyValuePairs, hoverHelp)
+    {
+        let section = this.createFormSection(label).addClass('bv-radios-group')
+        for (let i = 0; i < keyValuePairs.length; i++) {
+            section.append(
+                this.createFormGroup().append([
+                    this.createFormGroupLabel(keyValuePairs[i][0], 'radio'),
+                    this.createFormGroupInput('radio').prop('checked', i === 0).attr('data-value', keyValuePairs[i][1]).on('change', (event) => {
+                        $(event.currentTarget).parents('.bv-radios-group').first().find('input').each((index, element) => {
+                            if (!element.isSameNode(event.currentTarget)) {
+                                $(element).prop('checked', false)
+                            }
+                        })
+                    }),
+                ]),
+            )
+        }
+        return this._addHelpTextOnHover(section, hoverHelp)
+    }
+
+    /**
+     * @param {string} label
+     * @param {string} inputsType
+     * @param {number} minimum
+     * @param {number} maximum
+     * @param {string} hoverHelp
+     * @return {JQuery}
+     */
+    createFormRangeInputGroup(label, inputsType, minimum, maximum, hoverHelp)
+    {
+        return this._addHelpTextOnHover(
+            this.createFormGroup().addClass('bv-range-group').append([
+                this.createFormGroupLabel(label, inputsType),
+                this.createFormGroupInput(inputsType).attr('min', minimum).attr('max', maximum),
+                this.createFormGroupInput(inputsType).attr('min', minimum).attr('max', maximum),
+            ]),
+            hoverHelp,
+        )
+    }
+
+    /**
+     * @param {string} title
+     * @return {JQuery}
+     */
+    createFormSection(title = '')
+    {
+        return $('<div>').append($('<label class="bv-title">').text(title))
+    }
+
+    /**
+     * @param {string} label
+     * @param {int} rows
+     * @param {string} hoverHelp
+     * @return {JQuery}
+     */
+    createFormTextAreaGroup(label, rows, hoverHelp = '')
+    {
+        return this._addHelpTextOnHover(
+            this.createFormGroup().addClass('bv-textarea-group').append([
+                this.createFormGroupLabel(label),
+                $('<textarea class="bv-input" spellcheck="false">').attr('rows', rows),
+            ]),
+            hoverHelp,
+        )
+    }
+
+    /**
+     * @return {JQuery}
+     */
+    createSeparator()
+    {
+        return $('<hr/>')
+    }
+
+    /**
+     * @return {JQuery}
+     */
+    createSettingsHideButton()
+    {
+        return this.createFormButton('<< Hide', '', () => this._section.css('display', 'none'))
+    }
+
+    /**
+     * @return {JQuery}
+     */
+    createSettingsSection()
+    {
+        return this.createContainer()
+            .attr('id', 'settings-wrapper')
+            .addClass('bv-bg-colour bv-border-primary')
+            .hide()
+    }
+
+    /**
+     * @param {string} caption
+     * @param {JQuery} settingsSection
+     *
+     * @return {JQuery}
+     */
+    createSettingsShowButton(caption, settingsSection)
+    {
+        return $('<button class="show-settings bv-section bv-bg-colour">')
+            .text(caption)
+            .on('click', () => settingsSection.slideDown(300))
+    }
+
+    /**
+     * @param {string} statisticsType
+     * @param {string} label
+     * @return {JQuery}
+     */
+    createStatisticsFormGroup(statisticsType, label = '')
+    {
+        return this.createFormGroup().addClass('bv-stat-group').append([
+            this.createFormGroupLabel((label === '' ? statisticsType : label) + ' Filter'),
+            this.createFormGroupStatLabel(statisticsType),
+        ])
+    }
+
+    /**
+     * @return {JQuery}
+     */
+    createStatisticsTotalsGroup()
+    {
+        return this.createFormGroup().append([
+            this.createFormGroupLabel('Total'),
+            this.createFormGroupStatLabel('Total'),
+        ])
+    }
+
+    /**
+     * @return {JQuery}
+     */
+    createStatusSection()
+    {
+        this._statusLine = this.createFormGroupLabel('Status').attr('id', this._selectorGenerator.getSelector('status'))
+        return this._statusLine
+    }
+
+    /**
+     * @param {string} tabName
+     * @param {boolean} isFirst
+     * @return {JQuery}
+     */
+    createTabButton(tabName, isFirst)
+    {
+        let tabButton = $('<button class="bv-tab-button bv-border-primary">')
+            .text(tabName)
+            .on('click', (event) => {
+
+                let button = $(event.currentTarget)
+                let tabSection = button.parents('.bv-tabs-section:first')
+
+                tabSection.find('.bv-tab-button')
+                    .removeClass('bv-active bv-font-secondary')
+                    .addClass('bv-font-primary')
+
+                tabSection.find('.bv-tab-panel').removeClass('bv-active')
+
+                button.removeClass('bv-font-primary').addClass('bv-active bv-font-secondary')
+
+                $('#' + Utilities.toKebabCase(button.text())).addClass('bv-active')
+            })
+            .on('mouseenter', (event) => $(event.currentTarget).addClass('bv-font-secondary'))
+            .on('mouseleave', (event) => $(event.currentTarget).removeClass('bv-font-secondary'))
+
+        return isFirst ? tabButton.addClass('bv-active bv-font-secondary') : tabButton.addClass('bv-font-primary')
+    }
+
+    /**
+     * @param {string} tabName
+     * @param {boolean} isFirst
+     * @return {JQuery}
+     */
+    createTabPanel(tabName, isFirst = false)
+    {
+        let tabPanel = $('<div class="bv-tab-panel bv-border-primary">').attr('id', Utilities.toKebabCase(tabName))
+        if (isFirst) {
+            tabPanel.addClass('bv-active')
+        }
+        return tabPanel
+    }
+
+    /**
+     * @param {string[]} tabNames
+     * @param {JQuery[]} tabPanels
+     * @return {JQuery}
+     */
+    createTabsSection(tabNames, tabPanels)
+    {
+        let tabButtons = []
+        for (let i = 0; i < tabNames.length; i++) {
+            tabButtons.push(this.createTabButton(tabNames[i], i === 0))
+        }
+        let nav = $('<div class="bv-tabs-nav">').append(tabButtons)
+        return $('<div class="bv-tabs-section">').append(nav).append(...tabPanels)
+    }
+
+    /**
+     * @return {JQuery}
+     */
+    getSelectedSection()
+    {
+        return this._section
+    }
+
+    resetStatus()
+    {
+        this._statusLine.text(this._statusText)
+    }
+
+    /**
+     * @param {string} status
+     * @param {boolean} transient
+     */
+    updateStatus(status, transient = false)
+    {
+        if (!transient) {
+            this._statusText = status
+        }
+        this._statusLine.text(status)
+    }
+}
 
   _buildPanel(title) {
     const panel = $(`
