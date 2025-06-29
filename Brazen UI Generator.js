@@ -1,21 +1,196 @@
 // ==UserScript==
-// @name         Brazen UI Generator
+// @name         Brazen UI Generator (Revamped)
 // @namespace    brazenvoid
-// @version      2.0.16
+// @version      3.0.0
 // @author       brazenvoid
 // @license      GPL-3.0-only
-// @description  Helper methods to generate a control panel UI for scripts
+// @description  UI panel generator with inline button injection
 // @grant        GM_addStyle
 // ==/UserScript==
 
-/**
- * @function GM_addStyle
- * @param {string} style
- */
-GM_addStyle(`@keyframes brazen-fade{from{opacity:0}to{opacity:1}}#restore-settings.bv-input{margin-bottom:1rem}#settings-wrapper{bottom:5vh;overflow:auto;resize:horizontal;top:5vh;z-index:1001}.show-settings.bv-section{top:5vh;box-shadow:0 0 20px white;padding:8px;border-radius:5px;border:2px solid white}.bv-actions{display:inline-flex;justify-content:center;padding:0 0.25rem;text-align:center}.bv-actions .bv-button{width:auto}.bv-bg-colour{background-color:#4f535b}.bv-border-primary{border:1px solid black}.bv-break{margin:0.5rem 0}.bv-button{background-color:revert;padding:0.5rem 1rem;width:100%}.bv-flex-column{flex-direction:column}.bv-font-primary{color:white}.bv-font-secondary{color:black}.bv-group{align-items:center;display:flex;min-height:20px}.bv-group + .bv-group{margin-top:1rem}.bv-group.bv-range-group,.bv-group.bv-text-group{align-items:center}.bv-group.bv-range-group > input{width:75px}.bv-group.bv-range-group > input + input{margin-left:5px}.bv-group.bv-textarea-group{align-items:start;flex-direction:column;overflow:hidden}.bv-group.bv-textarea-group > textarea.bv-input{margin-top:0.5rem;resize:vertical;width:100%}input.bv-input,select.bv-input,textarea.bv-input{box-sizing:border-box;margin:0;padding:0.5rem}.bv-input.bv-checkbox-radio{margin-right:5px;scale:2}.bv-input.bv-text{width:100%}.bv-label{flex-grow:1;text-align:start}.bv-label.bv-text + .bv-input.bv-text{width:40%}.bv-section{display:flex;flex-direction:column;font-family:"roboto";font-size:1rem;font-weight:normal;left:0;padding:1rem;position:fixed;z-index:1000}.bv-section > div + div{margin-top:1rem}.bv-section hr{border:1px solid white;margin:1rem 0}.bv-section button + button{margin-left:0.25rem}.bv-section .bv-title{display:block;height:20px;margin-bottom:1rem;text-align:center;width:100%}.bv-show-settings{border:0;font-size:0.7rem;height:90vh;left:0;margin:0;padding:0;position:fixed;top:5vh;width:0.2vw;writing-mode:sideways-lr;z-index:999}.bv-show-settings .bv-title{display:block;height:20px;width:100%}.bv-tab-button{background-color:inherit;border-bottom:0;border-top-left-radius:3px;border-top-right-radius:3px;cursor:pointer;outline:none;padding:0.5rem 0.75rem;transition:0.3s}.bv-tab-button.bv-active,.bv-tab-button:hover{color:black;background-color:white}.bv-tab-panel{animation:brazen-fade 1s;display:none;flex-direction:column;padding:1rem}.bv-tab-panel.bv-active{display:flex}.bv-tabs-nav{display:flex;flex-wrap:wrap;overflow:hidden}`)
+GM_addStyle(`
+@keyframes bv-fade-in { from { opacity: 0 } to { opacity:1 } }
+.bv-panel {
+  position: fixed;
+  top: 60px; right: 40px;
+  width: 320px;
+  background: #2b2b2b;
+  color: #eee;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  padding: 16px;
+  display: none;
+  animation: bv-fade-in .3s ease-out;
+  z-index: 10000;
+}
+.bv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.bv-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+.bv-close {
+  background: transparent;
+  border: none;
+  color: #eee;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+.bv-content {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.bv-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+.bv-group label {
+  font-size: .9rem;
+  margin-bottom: 4px;
+}
+.bv-group input,
+.bv-group select,
+.bv-group textarea {
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #555;
+  background: #3a3a3a;
+  color: #eee;
+}
+.bv-group textarea {
+  resize: vertical;
+}
+.bv-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.bv-button {
+  padding: 6px 12px;
+  background: #4a90e2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.bv-inject-btn {
+  margin-left: 0.5rem;
+  padding: 4px 8px;
+  font-size: .85rem;
+}
+`);
 
-class BrazenUIGenerator
-{
+class BrazenUIGenerator {
+  constructor(title = 'Settings') {
+    this._panel = this._buildPanel(title);
+    $('body').append(this._panel);
+    this._content = this._panel.find('.bv-content');
+  }
+
+  _buildPanel(title) {
+    const panel = $(`
+      <div class="bv-panel">
+        <div class="bv-header">
+          <h2>${title}</h2>
+          <button class="bv-close">&times;</button>
+        </div>
+        <div class="bv-content"></div>
+      </div>
+    `);
+    panel.find('.bv-close').on('click', () => panel.hide());
+    return panel;
+  }
+
+  toggle() {
+    this._panel.toggle();
+  }
+
+  appendSettingsButtonTo(selector, buttonText = '⚙ Settings') {
+    const container = $(selector).first();
+    if (!container.length) return this;
+    const btn = $('<button>')
+      .addClass('bv-button bv-inject-btn')
+      .text(buttonText)
+      .on('click', () => this.toggle());
+    container.append(btn);
+    return this;
+  }
+
+  addInput(id, label, type = 'text', placeholder = '', defaultValue = '') {
+    const group = $('<div>').addClass('bv-group');
+    group.append($('<label>').attr('for', id).text(label));
+    const input = $('<input>')
+      .attr({ id, type, placeholder })
+      .val(defaultValue);
+    group.append(input);
+    this._content.append(group);
+    return this;
+  }
+
+  addTextarea(id, label, rows = 3, placeholder = '') {
+    const group = $('<div>').addClass('bv-group');
+    group.append($('<label>').attr('for', id).text(label));
+    const ta = $('<textarea>')
+      .attr({ id, rows, placeholder });
+    group.append(ta);
+    this._content.append(group);
+    return this;
+  }
+
+  addSelect(id, label, options = []) {
+    const group = $('<div>').addClass('bv-group');
+    group.append($('<label>').attr('for', id).text(label));
+    const sel = $('<select>').attr('id', id);
+    for (const [val, text] of options) {
+      sel.append($('<option>').attr('value', val).text(text));
+    }
+    group.append(sel);
+    this._content.append(group);
+    return this;
+  }
+
+  addCheckbox(id, label, defaultChecked = false) {
+    const group = $('<div>').addClass('bv-group');
+    const cb = $('<input>').attr({ type: 'checkbox', id }).prop('checked', defaultChecked);
+    const lbl = $('<label>').attr('for', id).text(label);
+    group.append(lbl.prepend(cb));
+    this._content.append(group);
+    return this;
+  }
+
+  addActionButtons(buttons = []) {
+    const wrap = $('<div>').addClass('bv-actions');
+    buttons.forEach(({ text, cb }) => {
+      wrap.append($('<button>').addClass('bv-button').text(text).on('click', cb));
+    });
+    this._content.append(wrap);
+    return this;
+  }
+
+  getValue(id) {
+    return this._content.find('#' + id).val();
+  }
+
+  getChecked(id) {
+    return this._content.find('#' + id).prop('checked');
+  }
+
+  show() {
+    this._panel.show();
+    return this;
+  }
+
+  hide() {
+    this._panel.hide();
+    return this;
+  }
+}
+
     /**
      * @param {JQuery} nodes
      */
